@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import "./index.css";
+import ReactMarkdown from "react-markdown";
+import styles from "./styles.module.css";
+import remarkGfm from "remark-gfm"; 
+import rehypeSanitize from "rehype-sanitize";
 
 function Chatbot() {
     const [messages, setMessages] = useState([]);
@@ -59,32 +62,39 @@ function Chatbot() {
 
     return (
         <div>
-            <button className="chatbot-button" onClick={toggleChatbot}>
+            <button className={styles.chatbotButton} onClick={toggleChatbot}>
                 {isOpen ? "Close Chat" : "Chat with Us!"}
             </button>
 
             {isOpen && (
-                <div className="chatbot-modal">
-                    <div className="chatbot-messages">
+                <div className={styles.chatbotModal}>
+                    <div className={styles.chatbotMessages}>
                         {messages.map((msg, index) => (
                             <div
                                 key={index}
-                                className={`message ${msg.sender}`}>
-                                {msg.text}
+                                className={`${styles.message} ${styles[`message${msg.sender.charAt(0).toUpperCase() + msg.sender.slice(1)}`]}`}>
+                                <ReactMarkdown 
+                                    remarkPlugins={[remarkGfm]} 
+                                    rehypePlugins={[rehypeSanitize]}
+                                    className={styles.md}
+                                >
+                                    {msg.text}
+                                </ReactMarkdown>
                             </div>
                         ))}
                         <div ref={messagesEndRef} />
                     </div>
-                    <div className="chatbot-input">
+                    <div className={styles.chatbotInput}>
                         <input
                             type="text"
                             value={userInput}
                             onChange={(e) => setUserInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Type your message..."
+                            className={styles.chatbotInputInput}
                         />
-                        <button onClick={sendMessage} disabled={loading}>
-                            {loading ? <div className="loader"></div> : "Send"}
+                        <button onClick={sendMessage} disabled={loading} className={styles.chatbotInputButton}>
+                            {loading ? <div className={styles.loader}></div> : "Send"}
                         </button>
                     </div>
                 </div>

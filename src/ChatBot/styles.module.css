@@ -1,4 +1,6 @@
-.chatbot-button {
+/* index.module.css */
+
+.chatbotButton {
     position: fixed;
     bottom: 20px;
     right: 20px;
@@ -13,11 +15,11 @@
     transition: background-color 0.3s;
 }
 
-.chatbot-button:hover {
+.chatbotButton:hover {
     background-color: #357abd;
 }
 
-.chatbot-modal {
+.chatbotModal {
     position: fixed;
     bottom: 80px;
     right: 20px;
@@ -33,7 +35,7 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.chatbot-messages {
+.chatbotMessages {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
@@ -41,37 +43,38 @@
     flex-direction: column;
 }
 
-.message {
+.message{
     max-width: 70%;
-    padding: 10px 15px;
+    padding: 0px 15px;
     border-radius: 18px;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
     font-size: 14px;
     line-height: 1.4;
 }
 
-.message.user {
+
+.messageUser {
     background-color: #4a90e2;
     color: white;
     align-self: flex-end;
     border-bottom-right-radius: 4px;
 }
 
-.message.bot {
+.messageBot {
     background-color: #e9e9eb;
     color: #333;
     align-self: flex-start;
     border-bottom-left-radius: 4px;
 }
 
-.chatbot-input {
+.chatbotInput {
     display: flex;
     padding: 15px;
     background-color: white;
     border-top: 1px solid #e0e0e0;
 }
 
-.chatbot-input input {
+.chatbotInputInput {
     flex: 1;
     padding: 10px 15px;
     border: 1px solid #ccc;
@@ -80,7 +83,7 @@
     font-size: 14px;
 }
 
-.chatbot-input button {
+.chatbotInputButton {
     padding: 10px 20px;
     background-color: #4a90e2;
     color: white;
@@ -91,7 +94,7 @@
     transition: background-color 0.3s;
 }
 
-.chatbot-input button:hover {
+.chatbotInputButton:hover {
     background-color: #357abd;
 }
 
@@ -109,12 +112,12 @@
     100% { transform: rotate(360deg); }
 }
 
-@keyframes typing {
-    from { width: 0 }
-    to { width: 100% }
+
+.md * {
+    margin-top: 8px;
+    margin-bottom: 10px;
+    text-wrap : wrap;
 }
 
-@keyframes blink-caret {
-    from, to { border-color: transparent }
-    50% { border-color: #333; }
-}
+
+
