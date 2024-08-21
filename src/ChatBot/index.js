@@ -21,6 +21,8 @@ function Chatbot() {
         getThreadId()
     },[])
 
+    console.log(messages)
+
     useEffect(scrollToBottom, [messages]);
 
     const toggleChatbot = () => {
@@ -40,44 +42,63 @@ function Chatbot() {
     }
 
     const sendMessage = async () => {
-        if (userInput.trim() === "") return;
+    if (userInput.trim() === "") return;
 
-        setLoading(true);
-        setUserInput("");
+    setLoading(true);
+    setUserInput("");
 
-        const newMessages = [...messages, { sender: "user", text: userInput }];
-        setMessages(newMessages);
-        
-        const placeholderMessage = { sender: "bot", text: ". . ." };
-        setMessages([...newMessages, placeholderMessage]);
+    const newMessages = [...messages, { sender: "user", text: userInput }];
+    setMessages(newMessages);
 
-        try {
-            const response = await fetch("http://localhost:3000/message", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    message: userInput,
-                    threadId : threadId
-                }),
-            });
+    const placeholderMessage = { sender: "bot", text: ". . ." };
+    setMessages([...newMessages, placeholderMessage])
 
-            const data = await response.json();
-            console.log(data)
-            const botReply = data.messages[0].content;
+    try {
+        const response = await fetch("http://localhost:3000/message", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                message: userInput,
+                threadId: threadId,
+            }),
+        });
 
-            setMessages(prevMessages =>
-            prevMessages.map(msg =>
-                msg === placeholderMessage ? { sender: "bot", text: botReply } : msg
-            )
-            );
-        } catch (error) {
-            console.error("Error sending message:", error);
-        } finally {
-            setLoading(false);
+        const reader = response.body.getReader();
+        const textDecoder = new TextDecoder();
+        let receivedText = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+                break;
+            }
+
+            const chunk = textDecoder.decode(value);
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+                if (line === "[DONE]") {
+                    setLoading(false);
+                    return;
+                } else {
+                    receivedText += line;
+                    const newMessages = [...messages, { sender: "user", text: userInput }];
+                    const botMessage = { sender: "bot", text: receivedText };
+                    setMessages([...newMessages, botMessage])
+                    
+                }
+            }
         }
-    };
+    } catch (error) {
+        console.error("Error sending message:", error);
+        setLoading(false);
+    }
+};
+
+
+
 
     const handleKeyDown = (e) => {
         if (e.key === "Enter") {

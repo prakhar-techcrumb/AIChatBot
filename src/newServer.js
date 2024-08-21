@@ -22,7 +22,8 @@ const openai = new OpenAI({
 
 // Assistant can be created via API or UI
 const assistantId = ASSISTANT_ID;
-let pollingInterval;
+
+const log = {}
 
 // Set up a Thread
 async function createThread() {
@@ -37,11 +38,20 @@ async function addMessage(threadId, message) {
         role: "user",
         content: message,
     });
+    if (!log[threadId]) {
+        log[threadId] = [];
+    }
+    log[threadId].unshift({
+        role: "user",
+        content: message,
+    });
     return response;
 }
 
-async function runAssistant(threadId) {
-    console.log("Running assistant for thread: " + threadId);
+async function runAssistant(res,threadId) {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
     return new Promise((resolve, reject) => {
         openai.beta.threads.runs
             .createAndStream(threadId, {
@@ -53,9 +63,18 @@ async function runAssistant(threadId) {
             })
             .on("textDelta", (textDelta, snapshot) => {
                 term.inverse(textDelta.value);
+                res.write(`${textDelta.value}\n\n`);
             })
             .on("event", (event) => {
                 if (event.event === "thread.message.completed") {
+                    let message = event.data.content[0].text.value
+                    log[threadId].unshift({
+                        role: "bot",
+                        content: message,
+                    });
+                    res.write("[DONE]\n\n");
+                    res.end();
+                    console.log("LOG",log);
                     resolve(event.data.run_id);
                 }
             })
@@ -65,33 +84,6 @@ async function runAssistant(threadId) {
             });
     });
 
-}
-
-async function checkingStatus(res, threadId, runId) {
-    const runObject = await openai.beta.threads.runs.retrieve(threadId, runId);
-
-    const status = runObject.status;
-    console.log(runObject);
-    console.log("Current status: " + status);
-
-    if (status == "completed") {
-        clearInterval(pollingInterval);
-
-        const messagesList = await openai.beta.threads.messages.list(threadId);
-        let messages = [];
-
-
-        messagesList.body.data.forEach((message) => {
-            messages.push({
-                role: message.role,
-                content: message.content
-                    .map((c) => (c.type === "text" ? c.text.value : null))[0]
-            });
-        });
-
-
-        res.json({ messages });
-    }
 }
 
 
@@ -109,14 +101,7 @@ app.get("/thread", (req, res) => {
 app.post("/message", (req, res) => {
     const { message, threadId } = req.body;
     addMessage(threadId, message).then((message) => {
-        // res.json({ messageId: message.id });
-
-        // Run the assistant
-        runAssistant(threadId).then(async (run) => {
-            pollingInterval = setInterval(() => {
-                checkingStatus(res, threadId, run);
-            }, 5000);
-        });
+        runAssistant(res,threadId)
     });
 });
 
