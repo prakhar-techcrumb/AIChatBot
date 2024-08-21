@@ -2,8 +2,10 @@ require("dotenv").config();
 const OpenAI = require("openai");
 const express = require("express");
 const cors = require("cors");
+const terminal = require("terminal-kit")
 const { OPENAI_API_KEY, ASSISTANT_ID } = process.env;
 
+const term = terminal.terminal
 // Setup Express
 const app = express();
 const corsOptions = {
@@ -40,14 +42,29 @@ async function addMessage(threadId, message) {
 
 async function runAssistant(threadId) {
     console.log("Running assistant for thread: " + threadId);
-    const response = await openai.beta.threads.runs.create(threadId, {
-        assistant_id: assistantId,
-        // Make sure to not overwrite the original instruction, unless you want to
+    return new Promise((resolve, reject) => {
+        openai.beta.threads.runs
+            .createAndStream(threadId, {
+                assistant_id: assistantId,
+            })
+            .on("textCreated", (text) => {
+                console.log("\n");
+                term.inverse("Assistant:\n");
+            })
+            .on("textDelta", (textDelta, snapshot) => {
+                term.inverse(textDelta.value);
+            })
+            .on("event", (event) => {
+                if (event.event === "thread.message.completed") {
+                    resolve(event.data.run_id);
+                }
+            })
+            .on("error", (error) => {
+                console.log(error);
+                reject(error);
+            });
     });
 
-    console.log(response);
-
-    return response;
 }
 
 async function checkingStatus(res, threadId, runId) {
@@ -65,7 +82,6 @@ async function checkingStatus(res, threadId, runId) {
 
 
         messagesList.body.data.forEach((message) => {
-            console.log("EACH", message);
             messages.push({
                 role: message.role,
                 content: message.content
@@ -77,6 +93,7 @@ async function checkingStatus(res, threadId, runId) {
         res.json({ messages });
     }
 }
+
 
 //=========================================================
 //============== ROUTE SERVER =============================
@@ -95,12 +112,9 @@ app.post("/message", (req, res) => {
         // res.json({ messageId: message.id });
 
         // Run the assistant
-        runAssistant(threadId).then((run) => {
-            const runId = run.id;
-
-            // Check the status
+        runAssistant(threadId).then(async (run) => {
             pollingInterval = setInterval(() => {
-                checkingStatus(res, threadId, runId);
+                checkingStatus(res, threadId, run);
             }, 5000);
         });
     });

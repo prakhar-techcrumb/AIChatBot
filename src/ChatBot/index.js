@@ -3,7 +3,6 @@ import ReactMarkdown from "react-markdown";
 import styles from "./styles.module.css";
 import remarkGfm from "remark-gfm"; 
 import rehypeSanitize from "rehype-sanitize";
-import { v4 as uuidv4 } from "uuid";
 
 function Chatbot() {
     const [messages, setMessages] = useState([]);
