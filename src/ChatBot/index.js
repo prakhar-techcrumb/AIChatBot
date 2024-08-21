@@ -10,6 +10,7 @@ function Chatbot() {
     const [userInput, setUserInput] = useState("Hey");
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [threadId, setThreadId] = useState();
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -17,8 +18,8 @@ function Chatbot() {
     };
 
     useEffect(()=>{
-        const newId = uuidv4();
-        localStorage.setItem("UserId", newId);
+        console.log("called")
+        getThreadId()
     },[])
 
     useEffect(scrollToBottom, [messages]);
@@ -27,6 +28,17 @@ function Chatbot() {
         sendMessage()
         setIsOpen(!isOpen);
     };
+
+    async function getThreadId(){
+        const thread = await fetch("http://localhost:3000/thread",{
+            method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                }
+        });
+        const data = await thread.json();
+        setThreadId(data.threadId)
+    }
 
     const sendMessage = async () => {
         if (userInput.trim() === "") return;
@@ -41,20 +53,20 @@ function Chatbot() {
         setMessages([...newMessages, placeholderMessage]);
 
         try {
-            const response = await fetch("http://localhost:3001/api/chat", {
+            const response = await fetch("http://localhost:3000/message", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                     message: userInput,
-                    conversation: newMessages,
-                    userId : localStorage.getItem("UserId")
+                    threadId : threadId
                 }),
             });
 
             const data = await response.json();
-            const botReply = data.reply;
+            console.log(data)
+            const botReply = data.messages[0].content;
 
             setMessages(prevMessages =>
             prevMessages.map(msg =>

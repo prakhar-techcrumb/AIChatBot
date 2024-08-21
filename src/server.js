@@ -48,16 +48,35 @@ app.post("/api/chat", async (req, res) => {
       }
     );
     console.log("This is the message object: ", myThreadMessage, "\n");
-    console.log(threadByUser)
 
     // Run the Assistant
     const myRun = await openai.beta.threads.runs.create(
       threadByUser[userId], // Use the stored thread ID for this user
       {
         assistant_id: assistantIdToUse,
+        stream: true
       }
     );
-    console.log("This is the run object: ", myRun, "\n");
+
+    console.log("This is the run object: ", myRun.iterator, "\n");
+
+
+    async function getIdFromAsyncGenerator(asyncGeneratorFunction) {
+        const asyncIterator = asyncGeneratorFunction(); // Call the function to get the async iterator
+
+        for await (const chunk of asyncIterator) {
+            console.log("CHUNK",chunk)
+            if (chunk && chunk.data.id) {
+                return chunk.data.id; // Return the id if found
+            }
+        }
+
+        return null; 
+    }
+
+
+    const id = await getIdFromAsyncGenerator(myRun.iterator);
+    console.log("Retrieved ID:", id);
 
     // Periodically retrieve the run to check on its status
     const retrieveRun = async () => {
@@ -66,7 +85,7 @@ app.post("/api/chat", async (req, res) => {
       while (myRun.status !== "completed") {
         keepRetrievingRun = await openai.beta.threads.runs.retrieve(
           threadByUser[userId], // Use the stored thread ID for this user
-          myRun.id
+          id
         );
 
         console.log(`Run status: ${keepRetrievingRun.status}`);
