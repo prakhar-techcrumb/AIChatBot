@@ -31,7 +31,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -81,6 +81,11 @@
     border-radius: 20px;
     margin-right: 10px;
     font-size: 14px;
+    outline: none
+}
+
+.chatbotInputInput:focus {
+    outline: none;
 }
 
 .chatbotInputButton {

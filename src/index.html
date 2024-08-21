@@ -4,12 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
-  <script src="../dist/main.js"></script>
 </head>
 <body>
   <div id="root"></div>
+  <script src="../dist/main.js"></script>
   <script>
-    window.chatBot.setup("root")
+    document.addEventListener('DOMContentLoaded', () => {
+        window.chatBot.setup("root");
+    });
   </script>
 </body>
 </html>

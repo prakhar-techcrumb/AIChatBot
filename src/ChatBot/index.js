@@ -3,10 +3,11 @@ import ReactMarkdown from "react-markdown";
 import styles from "./styles.module.css";
 import remarkGfm from "remark-gfm"; 
 import rehypeSanitize from "rehype-sanitize";
+import { v4 as uuidv4 } from "uuid";
 
 function Chatbot() {
     const [messages, setMessages] = useState([]);
-    const [userInput, setUserInput] = useState("");
+    const [userInput, setUserInput] = useState("Hey");
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
@@ -15,9 +16,15 @@ function Chatbot() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
+    useEffect(()=>{
+        const newId = uuidv4();
+        localStorage.setItem("UserId", newId);
+    },[])
+
     useEffect(scrollToBottom, [messages]);
 
     const toggleChatbot = () => {
+        sendMessage()
         setIsOpen(!isOpen);
     };
 
@@ -29,6 +36,9 @@ function Chatbot() {
 
         const newMessages = [...messages, { sender: "user", text: userInput }];
         setMessages(newMessages);
+        
+        const placeholderMessage = { sender: "bot", text: ". . ." };
+        setMessages([...newMessages, placeholderMessage]);
 
         try {
             const response = await fetch("http://localhost:3001/api/chat", {
@@ -39,13 +49,18 @@ function Chatbot() {
                 body: JSON.stringify({
                     message: userInput,
                     conversation: newMessages,
+                    userId : localStorage.getItem("UserId")
                 }),
             });
 
             const data = await response.json();
             const botReply = data.reply;
 
-            setMessages([...newMessages, { sender: "bot", text: botReply }]);
+            setMessages(prevMessages =>
+            prevMessages.map(msg =>
+                msg === placeholderMessage ? { sender: "bot", text: botReply } : msg
+            )
+            );
         } catch (error) {
             console.error("Error sending message:", error);
         } finally {
@@ -86,6 +101,7 @@ function Chatbot() {
                     </div>
                     <div className={styles.chatbotInput}>
                         <input
+                            disabled={loading}
                             type="text"
                             value={userInput}
                             onChange={(e) => setUserInput(e.target.value)}

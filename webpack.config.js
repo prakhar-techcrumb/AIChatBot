@@ -1,4 +1,5 @@
 const path = require("path");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 let config = {
     module: {
@@ -6,9 +7,6 @@ let config = {
             {
                 test: /\.js$/,
                 exclude: /node_modules/,
-                // exclude: [
-                //     path.resolve(__dirname, 'src/modules/Player/')
-                // ],
                 use: {
                     loader: "babel-loader",
                     options: {
@@ -26,7 +24,12 @@ let config = {
         minimize: true,
         minimizer: [],
     },
-    plugins: [],
+    plugins: [
+        new HtmlWebpackPlugin({
+            template: "./src/index.html",
+            filename: "index.html",
+        }),
+    ],
     resolve: {
         extensions: [".js", ".jsx"],
     },
@@ -40,13 +43,14 @@ let mainConfig = () => {
             chunkFilename: "[name].js",
             filename: "main.js",
         },
-        // devServer: {
-        //     historyApiFallback: {
-        //         index: "test.html",
-        //     },
-        //     port: 8083,
-        // },
-    });
+        devServer: {
+            historyApiFallback: true,
+            port: 8080,
+            static: {
+                directory: path.join(__dirname, 'dist'),
+            },
+        }
+    })
 };
 // Return Array of Configurations
 module.exports = [mainConfig];

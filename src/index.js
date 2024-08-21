@@ -2,7 +2,6 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import App from "./App";
-import reportWebVitals from "./reportWebVitals";
 
 window.chatBot = {
     setup: (id) => {
@@ -20,5 +19,3 @@ window.chatBot = {
     },
 };
 
-// Call reportWebVitals to measure performance (optional)
-reportWebVitals();
