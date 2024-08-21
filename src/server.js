@@ -1,127 +1,112 @@
+require("dotenv").config();
+const OpenAI = require("openai");
 const express = require("express");
 const cors = require("cors");
-const OpenAI = require("openai");
-require("dotenv").config();
+const terminal = require("terminal-kit")
+const { OPENAI_API_KEY, ASSISTANT_ID } = process.env;
+
+const term = terminal.terminal
+// Setup Express
 const app = express();
-
-
 const corsOptions = {
-  origin: true, 
+    origin: true,
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json()); // Middleware to parse JSON bodies
 
+// Set up OpenAI Client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, 
+    apiKey: OPENAI_API_KEY,
 });
 
-const threadByUser = {};
+// Assistant can be created via API or UI
+const assistantId = ASSISTANT_ID;
 
-app.post("/api/chat", async (req, res) => {
-  const assistantIdToUse = process.env.ASSISTANT_ID;
-  const userId = req.body.userId;
-  console.log("USER ID : " , userId)
+const log = {}
 
-  // Create a new thread if it's the user's first message
-  if (!threadByUser[userId]) {
-    try {
-      const myThread = await openai.beta.threads.create();
-      console.log("New thread created with ID: ", myThread.id, "\n");
-      threadByUser[userId] = myThread.id; // Store the thread ID for this user
-    } catch (error) {
-      console.error("Error creating thread:", error);
-      res.status(500).json({ error: "Internal server error" });
-      return;
-    }
-  }
+// Set up a Thread
+async function createThread() {
+    console.log("Creating a new thread...");
+    const thread = await openai.beta.threads.create();
+    return thread;
+}
 
-  const userMessage = req.body.message;
-
-  // Add a message to the thread
-  try {
-    const myThreadMessage = await openai.beta.threads.messages.create(
-      threadByUser[userId], // Use the stored thread ID for this user
-      {
+async function addMessage(threadId, message) {
+    console.log("Adding a new message to thread: " + threadId);
+    const response = await openai.beta.threads.messages.create(threadId, {
         role: "user",
-        content: userMessage,
-      }
-    );
-    console.log("This is the message object: ", myThreadMessage, "\n");
-
-    // Run the Assistant
-    const myRun = await openai.beta.threads.runs.create(
-      threadByUser[userId], // Use the stored thread ID for this user
-      {
-        assistant_id: assistantIdToUse,
-        stream: true
-      }
-    );
-
-    console.log("This is the run object: ", myRun.iterator, "\n");
-
-
-    async function getIdFromAsyncGenerator(asyncGeneratorFunction) {
-        const asyncIterator = asyncGeneratorFunction(); // Call the function to get the async iterator
-
-        for await (const chunk of asyncIterator) {
-            console.log("CHUNK",chunk)
-            if (chunk && chunk.data.id) {
-                return chunk.data.id; // Return the id if found
-            }
-        }
-
-        return null; 
-    }
-
-
-    const id = await getIdFromAsyncGenerator(myRun.iterator);
-    console.log("Retrieved ID:", id);
-
-    // Periodically retrieve the run to check on its status
-    const retrieveRun = async () => {
-      let keepRetrievingRun;
-
-      while (myRun.status !== "completed") {
-        keepRetrievingRun = await openai.beta.threads.runs.retrieve(
-          threadByUser[userId], // Use the stored thread ID for this user
-          id
-        );
-
-        console.log(`Run status: ${keepRetrievingRun.status}`);
-
-        if (keepRetrievingRun.status === "completed") {
-          console.log("\n");
-          break;
-        }
-      }
-    };
-    await retrieveRun();
-
-    // Retrieve the messages added by the assistant to the thread
-    const allMessages = await openai.beta.threads.messages.list(
-      threadByUser[userId] // Use the stored thread ID for this user
-    );
-
-    // Send the response back to the front end
-    const assistantResponse = allMessages.data.find(
-      (msg) => msg.role === "assistant"
-    ).content[0].text.value;
-
-    res.status(200).json({
-      reply: assistantResponse,
+        content: message,
     });
-    console.log("User: ", myThreadMessage.content[0].text.value);
-    console.log("Assistant: ", assistantResponse);
+    if (!log[threadId]) {
+        log[threadId] = [];
+    }
+    log[threadId].unshift({
+        role: "user",
+        content: message,
+    });
+    return response;
+}
 
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
+async function runAssistant(res,threadId) {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    return new Promise((resolve, reject) => {
+        openai.beta.threads.runs
+            .createAndStream(threadId, {
+                assistant_id: assistantId,
+            })
+            .on("textCreated", (text) => {
+                console.log("\n");
+                term.inverse("Assistant:\n");
+            })
+            .on("textDelta", (textDelta, snapshot) => {
+                term.inverse(textDelta.value);
+                res.write(`${textDelta.value}\n\n`);
+            })
+            .on("event", (event) => {
+                if (event.event === "thread.message.completed") {
+                    let message = event.data.content[0].text.value
+                    log[threadId].unshift({
+                        role: "bot",
+                        content: message,
+                    });
+                    res.write("[DONE]\n\n");
+                    res.end();
+                    console.log("LOG",log);
+                    resolve(event.data.run_id);
+                }
+            })
+            .on("error", (error) => {
+                console.log(error);
+                reject(error);
+            });
+    });
+
+}
+
+
+//=========================================================
+//============== ROUTE SERVER =============================
+//=========================================================
+
+// Open a new thread
+app.get("/thread", (req, res) => {
+    createThread().then((thread) => {
+        res.json({ threadId: thread.id });
+    });
 });
 
-const PORT = process.env.PORT || 3001;
+app.post("/message", (req, res) => {
+    const { message, threadId } = req.body;
+    addMessage(threadId, message).then((message) => {
+        runAssistant(res,threadId)
+    });
+});
 
+// Start the server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });

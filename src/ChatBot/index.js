@@ -97,9 +97,6 @@ function Chatbot() {
     }
 };
 
-
-
-
     const handleKeyDown = (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
