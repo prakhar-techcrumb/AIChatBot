@@ -6,7 +6,7 @@ import rehypeSanitize from "rehype-sanitize";
 
 function Chatbot() {
     const [messages, setMessages] = useState([]);
-    const [userInput, setUserInput] = useState("Hey");
+    const [userInput, setUserInput] = useState("");
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [threadId, setThreadId] = useState();
@@ -42,7 +42,7 @@ function Chatbot() {
     }
 
     const sendMessage = async () => {
-    if (userInput.trim() === "") return;
+    if (userInput.trim() === "" && messages.length > 0) return;
 
     setLoading(true);
     setUserInput("");
@@ -60,7 +60,7 @@ function Chatbot() {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                message: userInput,
+                message: userInput || "hey",
                 threadId: threadId,
             }),
         });
