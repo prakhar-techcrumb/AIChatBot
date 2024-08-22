@@ -17,13 +17,10 @@ function Chatbot() {
     };
 
     useEffect(()=>{
-        console.log("called")
         getThreadId()
     },[])
 
-    console.log(messages)
-
-    useEffect(scrollToBottom, [messages]);
+    useEffect(scrollToBottom, [messages,loading]);
 
     const toggleChatbot = () => {
         sendMessage()
@@ -50,8 +47,8 @@ function Chatbot() {
     const newMessages = [...messages, { sender: "user", text: userInput }];
     setMessages(newMessages);
 
-    const placeholderMessage = { sender: "bot", text: ". . ." };
-    setMessages([...newMessages, placeholderMessage])
+    // const placeholderMessage = { sender: "bot", text: ". . ." };
+    // setMessages([...newMessages, placeholderMessage])
 
     try {
         const response = await fetch("http://localhost:3000/message", {
@@ -105,13 +102,16 @@ function Chatbot() {
     };
 
     return (
-        <div>
+        <div className={styles.parentDiv}>
             <button className={styles.chatbotButton} onClick={toggleChatbot}>
-                {isOpen ? "Close Chat" : "Chat with Us!"}
+                Learn More
             </button>
 
             {isOpen && (
                 <div className={styles.chatbotModal}>
+                     <button className={styles.chatbotCloseButton} onClick={toggleChatbot}>
+                        &times;
+                    </button>
                     <div className={styles.chatbotMessages}>
                         {messages.map((msg, index) => (
                             <div
