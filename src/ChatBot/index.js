@@ -23,7 +23,7 @@ function Chatbot() {
     useEffect(scrollToBottom, [messages, loading]);
 
     const toggleChatbot = () => {
-        sendMessage();
+        sendMessage("json",false);
         setIsOpen(!isOpen);
     };
 
@@ -38,17 +38,22 @@ function Chatbot() {
         setThreadId(data.threadId);
     }
 
-    const sendMessage = async (message = userInput) => {
+    const sendMessage = async (message = userInput, render = true) => {
         if (message.trim() === "" && messages.length > 0) return;
 
         setLoading(true);
         setUserInput("");
 
-        const newMessages = [...messages, { sender: "user", text: message }];
+        let newMessages = [...messages];
+        if (render) {
+            newMessages.push({ sender: "user", text: message });
+        }
+
         setMessages(newMessages);
 
+
         const placeholderMessage = { sender: "bot", text: ". . ." };
-        setMessages([...newMessages, placeholderMessage]);
+        setMessages([...newMessages,placeholderMessage]);
 
         try {
             const response = await fetch("http://localhost:3000/message", {
@@ -57,7 +62,7 @@ function Chatbot() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    message: message || "json",
+                    message: message,
                     threadId: threadId,
                 }),
             });
@@ -144,7 +149,8 @@ function Chatbot() {
                                                     formData.entries()
                                                 );
                                             sendMessage(
-                                                JSON.stringify(formValues)
+                                                JSON.stringify(formValues),
+                                                false
                                             );
                                         }}>
                                         <input

@@ -145,7 +145,7 @@
 
 
     .md * {
-        margin-top: 12px;
+        margin-top: 10px;
         margin-bottom: 10px;
         text-wrap : wrap;
     }
@@ -175,7 +175,7 @@
 
 /* New Styles for Form */
 .contactForm {
-    width: 85%; 
+    width: 15em; 
     display: flex;
     flex-direction: column;
     margin-top: 20px;

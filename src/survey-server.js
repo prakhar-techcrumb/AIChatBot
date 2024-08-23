@@ -49,37 +49,29 @@ async function addMessage(threadId, message) {
     return response;
 }
 
-async function runAssistant(threadId) {
+async function runAssistant(res,threadId) {
     console.log("Running assistant for thread: " + threadId);
     const response = await openai.beta.threads.runs.create(threadId, {
         assistant_id: assistantId,
         // Make sure to not overwrite the original instruction, unless you want to
     });
 
-    console.log("RESPONSE",response);
+    let run = await openai.beta.threads.runs.retrieve(threadId, response.id);
 
-    return response;
-}
-
-async function checkingStatus(res, threadId, runId) {
-    const runObject = await openai.beta.threads.runs.retrieve(threadId, runId);
-
-    const status = runObject.status;
-    console.log(runObject);
-    console.log("Current status: " + status);
-
-    if (status == "completed") {
-        clearInterval(pollingInterval);
-
-        const messagesList = await openai.beta.threads.messages.list(threadId);
-        let messages = [];
-
-        messagesList.body.data.forEach((message) => {
-            messages.push(message.content);
-        });
-
-        res.json({ messages : messages[0][0] });
+    while (run.status !== "completed") {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        run = await openai.beta.threads.runs.retrieve(threadId, response.id);
     }
+
+    const messagesList = await openai.beta.threads.messages.list(threadId);
+    let messages = [];
+
+    messagesList.body.data.forEach((message) => {
+        messages.push(message.content);
+    });
+
+    res.json({ messages: messages[0][0] });
+
 }
 
 //=========================================================
@@ -99,14 +91,7 @@ app.post("/message", (req, res) => {
         // res.json({ messageId: message.id });
 
         // Run the assistant
-        runAssistant(threadId).then((run) => {
-            const runId = run.id;
-
-            // Check the status
-            pollingInterval = setInterval(() => {
-                checkingStatus(res, threadId, runId);
-            }, 5000);
-        });
+        runAssistant(res,threadId)
     });
 });
 
