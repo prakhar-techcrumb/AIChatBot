@@ -67,6 +67,7 @@ async function runAssistant(res,threadId) {
     let messages = [];
 
     messagesList.body.data.forEach((message) => {
+        console.log(message,"MESSAGE")
         messages.push(message.content);
     });
 
@@ -88,9 +89,6 @@ app.get("/thread", (req, res) => {
 app.post("/message", (req, res) => {
     const { message, threadId } = req.body;
     addMessage(threadId, message).then((message) => {
-        // res.json({ messageId: message.id });
-
-        // Run the assistant
         runAssistant(res,threadId)
     });
 });

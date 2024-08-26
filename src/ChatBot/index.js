@@ -4,6 +4,8 @@ import styles from "./styles.module.css";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
 
+const LOGO_URL = "https://media-b.performoo.com/logos-performoo/orange-1000-184.png"
+
 function Chatbot() {
     const [messages, setMessages] = useState([]);
     const [userInput, setUserInput] = useState("");
@@ -11,6 +13,7 @@ function Chatbot() {
     const [loading, setLoading] = useState(false);
     const [threadId, setThreadId] = useState();
     const messagesEndRef = useRef(null);
+    const init = useRef(false)
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -23,7 +26,10 @@ function Chatbot() {
     useEffect(scrollToBottom, [messages, loading]);
 
     const toggleChatbot = () => {
-        sendMessage("json",false);
+        if (!init.current) {
+            sendMessage("json", false);
+            init.current = true;
+        }
         setIsOpen(!isOpen);
     };
 
@@ -37,6 +43,8 @@ function Chatbot() {
         const data = await thread.json();
         setThreadId(data.threadId);
     }
+
+    console.log(messages)
 
     const sendMessage = async (message = userInput, render = true) => {
         if (message.trim() === "" && messages.length > 0) return;
@@ -97,11 +105,14 @@ function Chatbot() {
 
             {isOpen && (
                 <div className={styles.chatbotModal}>
-                    <button
-                        className={styles.chatbotCloseButton}
-                        onClick={toggleChatbot}>
-                        &times;
-                    </button>
+                    <div className={styles.chatbotHeader}>
+                        <img src={LOGO_URL} style={{width : "160px"}}/>
+                        <button
+                            className={styles.chatbotCloseButton}
+                            onClick={toggleChatbot}>
+                            &times;
+                        </button>
+                    </div>
                     <div className={styles.chatbotMessages}>
                         {messages.map((msg, index) => (
                             <div
@@ -188,27 +199,29 @@ function Chatbot() {
                         ))}
                         <div ref={messagesEndRef} />
                     </div>
-                    <div className={styles.chatbotInput}>
-                        <input
-                            disabled={loading}
-                            type="text"
-                            value={userInput}
-                            onChange={(e) => setUserInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Type your message..."
-                            className={styles.chatbotInputInput}
-                        />
-                        <button
-                            onClick={sendMessage}
-                            disabled={loading}
-                            className={styles.chatbotInputButton}>
-                            {loading ? (
-                                <div className={styles.loader}></div>
-                            ) : (
-                                "Send"
-                            )}
-                        </button>
-                    </div>
+                    {messages[messages.length - 1]?.type !== "end" && (
+                        <div className={styles.chatbotInput}>
+                            <input
+                                disabled={loading}
+                                type="text"
+                                value={userInput}
+                                onChange={(e) => setUserInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="Type your message..."
+                                className={styles.chatbotInputInput}
+                            />
+                            <button
+                                onClick={sendMessage}
+                                disabled={loading}
+                                className={styles.chatbotInputButton}>
+                                {loading ? (
+                                    <div className={styles.loader}></div>
+                                ) : (
+                                    "Send"
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
