@@ -8,7 +8,7 @@ const LOGO_URL = "https://media-b.performoo.com/logos-performoo/orange-1000-184.
 
 function Chatbot() {
     const [messages, setMessages] = useState([]);
-    const [userInput, setUserInput] = useState("");
+    const [userInput, setUserInput] = useState(" ");
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [threadId, setThreadId] = useState();
@@ -34,7 +34,7 @@ function Chatbot() {
     };
 
     async function getThreadId() {
-        const thread = await fetch("http://localhost:3000/thread", {
+        const thread = await fetch("https://qa.performoo.com/thread", {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -47,6 +47,7 @@ function Chatbot() {
     console.log(messages)
 
     const sendMessage = async (message = userInput, render = true) => {
+        message = String(message);
         if (message.trim() === "" && messages.length > 0) return;
 
         setLoading(true);
@@ -64,7 +65,7 @@ function Chatbot() {
         setMessages([...newMessages,placeholderMessage]);
 
         try {
-            const response = await fetch("http://localhost:3000/message", {
+            const response = await fetch("https://qa.performoo.com/message", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
