@@ -7,11 +7,8 @@ window.chatBot = {
         const rootElement = document.getElementById(id);
         if (rootElement) {
             // Apply styling to the root element
-            rootElement.style.width = "500px";
-            rootElement.style.height = "500px";
-            rootElement.style.border = "1px solid #ccc"; // Soft border
-            rootElement.style.margin = "0 auto"; // Center the element horizontally
-
+            rootElement.style.width = "100%";
+            rootElement.style.height = "100%";
             const root = ReactDOM.createRoot(rootElement);
             root.render(<App />);
         } else {
