@@ -4,50 +4,79 @@ import styles from "./styles.module.css";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
 
+const ASSISTANT_ID = "asst_ltGdrxJli7IefufmCziIOsx2";
 const LOGO_URL = "https://media-b.performoo.com/logos-performoo/orange-1000-184.png"
 
 function Chatbot() {
     const [messages, setMessages] = useState([]);
-    const [userInput, setUserInput] = useState(" ");
+    const [userInput, setUserInput] = useState("");
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [threadId, setThreadId] = useState();
     const messagesEndRef = useRef(null);
     const init = useRef(false)
+    const threadId = useRef(null)
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        const messageContainer = messagesEndRef.current;
+        if (!messageContainer) return;
+
+        messageContainer.scrollTo({
+            top: messageContainer.scrollHeight,
+            behavior: "smooth",
+        });
     };
 
-    useEffect(() => {
-        getThreadId();
-    }, []);
-
     useEffect(scrollToBottom, [messages, loading]);
-
-    const toggleChatbot = () => {
+    
+    const toggleChatbot = async () => {
         if (!init.current) {
-            sendMessage("json", false);
-            init.current = true;
+            try {
+                setLoading(true)
+                await getThreadId();
+                if (threadId.current) {
+                    sendMessage("json", false);
+                    init.current = true;
+                } else {
+                    console.error("Thread ID not found.");
+                    setLoading(false)
+                }
+            } catch (error) {
+                console.error("Failed to initialize thread:", error);
+                setLoading(false)
+                return;
+            }
         }
+        setLoading(false)
         setIsOpen(!isOpen);
     };
 
     async function getThreadId() {
-        const thread = await fetch("https://qa.performoo.com/thread", {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-        const data = await thread.json();
-        setThreadId(data.threadId);
+        let newMessages = [...messages];
+        try{
+            const thread = await fetch("https://qa.performoo.com/thread", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            const data = await thread.json();
+            threadId.current = data.threadId;
+        }
+        catch (error) {
+            console.error("Error getting threadId", error);
+
+            const errorMessage = {
+                sender: "bot",
+                text: "Could not process your request. Please refresh or try again later",
+                type: "error",
+            };
+
+            setMessages([...newMessages, errorMessage]);
+            setLoading(false)
+        }
     }
 
-    console.log(messages)
-
     const sendMessage = async (message = userInput, render = true) => {
-        message = String(message);
         if (message.trim() === "" && messages.length > 0) return;
 
         setLoading(true);
@@ -61,7 +90,7 @@ function Chatbot() {
         setMessages(newMessages);
 
 
-        const placeholderMessage = { sender: "bot", text: ". . ." };
+        const placeholderMessage = { sender: "bot", text: "Typing . . ." };
         setMessages([...newMessages,placeholderMessage]);
 
         try {
@@ -71,22 +100,34 @@ function Chatbot() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
+                    assistantId : ASSISTANT_ID,
                     message: message,
-                    threadId: threadId,
+                    threadId: threadId.current,
                 }),
             });
 
             const data = await response.json();
             let content = data.messages.text.value;
             let jsonObject = JSON.parse(content);
-            let type = jsonObject?.type
+            let type = jsonObject?.type;
 
-
-            const botMessage = { sender: "bot", text: jsonObject?.content, type: type };
+            const botMessage = {
+                sender: "bot",
+                text: jsonObject?.content,
+                type: type,
+            };
             setMessages([...newMessages, botMessage]);
             setLoading(false);
         } catch (error) {
             console.error("Error sending message:", error);
+
+            const errorMessage = {
+                sender: "bot",
+                text: "Could not process your request. Please refresh or try again later",
+                type: "error",
+            };
+
+            setMessages([...newMessages, errorMessage]);
             setLoading(false);
         }
     };
@@ -101,20 +142,25 @@ function Chatbot() {
     return (
         <div className={styles.parentDiv}>
             <button className={styles.chatbotButton} onClick={toggleChatbot}>
-                Learn More
+                {loading ? (
+                    <div className={styles.loader}></div>
+                ) : (
+                    <span>Learn More</span>
+                )}
             </button>
-
             {isOpen && (
                 <div className={styles.chatbotModal}>
                     <div className={styles.chatbotHeader}>
-                        <img src={LOGO_URL} style={{width : "160px"}}/>
+                        <img src={LOGO_URL} style={{ width: "6rem" }} />
                         <button
                             className={styles.chatbotCloseButton}
                             onClick={toggleChatbot}>
                             &times;
                         </button>
                     </div>
-                    <div className={styles.chatbotMessages}>
+                    <div
+                        className={styles.chatbotMessages}
+                        ref={messagesEndRef}>
                         {messages.map((msg, index) => (
                             <div
                                 key={index}
@@ -198,10 +244,11 @@ function Chatbot() {
                                 )}
                             </div>
                         ))}
-                        <div ref={messagesEndRef} />
                     </div>
-                    {messages[messages.length - 1]?.type !== "end" && (
-                        <div className={styles.chatbotInput}>
+                    {messages[messages.length - 1]?.type == "general" && (
+                        <div
+                            className={styles.chatbotInput}
+                        >
                             <input
                                 disabled={loading}
                                 type="text"
@@ -212,13 +259,13 @@ function Chatbot() {
                                 className={styles.chatbotInputInput}
                             />
                             <button
-                                onClick={sendMessage}
+                                onClick={() => sendMessage(userInput)}
                                 disabled={loading}
                                 className={styles.chatbotInputButton}>
                                 {loading ? (
                                     <div className={styles.loader}></div>
                                 ) : (
-                                    "Send"
+                                    <span>Send</span>
                                 )}
                             </button>
                         </div>
